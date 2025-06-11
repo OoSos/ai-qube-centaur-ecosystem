@@ -1,0 +1,298 @@
+{
+  "name": "AI Qube Multi-Agent Coordination Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent-task",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-task-trigger",
+      "name": "Agent Task Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "ai-qube-agent-task"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"task_type\"]}}",
+              "operation": "equal",
+              "value2": "centaur_development"
+            }
+          ]
+        }
+      },
+      "id": "task-type-router",
+      "name": "Task Type Router",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// AI Qube Agent Assignment Logic\nconst task = $input.first().json;\n\n// Agent capabilities mapping\nconst agentCapabilities = {\n  'copilot': ['code_generation', 'integration', 'debugging'],\n  'claude_pro': ['architecture', 'analysis', 'documentation'],\n  'gemini_25_pro': ['research', 'data_analysis', 'rag_systems'],\n  'codex': ['code_generation', 'digital_twin', 'implementation']\n};\n\n// Find best agent for task\nfunction findBestAgent(requiredCapabilities) {\n  let bestAgent = null;\n  let maxScore = 0;\n  \n  for (const [agent, capabilities] of Object.entries(agentCapabilities)) {\n    const score = requiredCapabilities.filter(req => \n      capabilities.includes(req)\n    ).length;\n    \n    if (score > maxScore) {\n      maxScore = score;\n      bestAgent = agent;\n    }\n  }\n  \n  return bestAgent;\n}\n\nconst assignedAgent = findBestAgent(task.required_capabilities || []);\n\nreturn {\n  task_id: task.task_id,\n  assigned_agent: assignedAgent,\n  priority: task.priority || 'medium',\n  estimated_duration: task.estimated_duration || '2h',\n  coordination_timestamp: new Date().toISOString(),\n  workflow_status: 'assigned'\n};"
+      },
+      "id": "agent-assignment",
+      "name": "Agent Assignment Logic",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{$json[\"agent_endpoint\"]}}/task-assignment",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$json[\"api_key\"]}}"
+            },
+            {
+              "name": "Content-Type", 
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "task_id",
+              "value": "={{$json[\"task_id\"]}}"
+            },
+            {
+              "name": "assigned_agent",
+              "value": "={{$json[\"assigned_agent\"]}}"
+            },
+            {
+              "name": "priority",
+              "value": "={{$json[\"priority\"]}}"
+            }
+          ]
+        }
+      },
+      "id": "notify-agent",
+      "name": "Notify Assigned Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/tasks/update",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "task_id",
+              "value": "={{$json[\"task_id\"]}}"
+            },
+            {
+              "name": "status",
+              "value": "assigned"
+            },
+            {
+              "name": "assigned_agent",
+              "value": "={{$json[\"assigned_agent\"]}}"
+            },
+            {
+              "name": "updated_at",
+              "value": "={{$json[\"coordination_timestamp\"]}}"
+            }
+          ]
+        }
+      },
+      "id": "update-task-log",
+      "name": "Update Unified Task Log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"success\", \"message\": \"Task assigned to \" + $json[\"assigned_agent\"], \"task_id\": $json[\"task_id\"], \"workflow_id\": \"ai-qube-coordination\"}"
+      },
+      "id": "response-success",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Financial System Protection Check\nconst task = $input.first().json;\n\n// Check if task affects Financial System\nconst isFinancialTask = task.system === 'financial' || \n                       task.tags?.includes('financial') ||\n                       task.task_id?.startsWith('FINANCIAL-');\n\nif (isFinancialTask) {\n  // Apply stricter validation for financial tasks\n  return {\n    ...task,\n    protection_level: 'critical',\n    requires_approval: true,\n    validation_required: true,\n    priority: 'critical',\n    notification_required: true\n  };\n}\n\nreturn {\n  ...task,\n  protection_level: 'standard',\n  requires_approval: false,\n  validation_required: false\n};"
+      },
+      "id": "financial-protection",
+      "name": "Financial System Protection",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json[\"requires_approval\"]}}",
+              "operation": "equal",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "approval-check",
+      "name": "Approval Required?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/approvals/request",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "task_id",
+              "value": "={{$json[\"task_id\"]}}"
+            },
+            {
+              "name": "requester",
+              "value": "n8n-workflow"
+            },
+            {
+              "name": "approval_type",
+              "value": "financial_system_task"
+            },
+            {
+              "name": "urgency",
+              "value": "={{$json[\"priority\"]}}"
+            }
+          ]
+        }
+      },
+      "id": "request-approval",
+      "name": "Request VS Code Approval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1120, 500]
+    }
+  ],
+  "connections": {
+    "webhook-task-trigger": {
+      "main": [
+        [
+          {
+            "node": "task-type-router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "task-type-router": {
+      "main": [
+        [
+          {
+            "node": "agent-assignment",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "financial-protection", 
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agent-assignment": {
+      "main": [
+        [
+          {
+            "node": "notify-agent",
+            "type": "main", 
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "notify-agent": {
+      "main": [
+        [
+          {
+            "node": "update-task-log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update-task-log": {
+      "main": [
+        [
+          {
+            "node": "response-success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "financial-protection": {
+      "main": [
+        [
+          {
+            "node": "approval-check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "approval-check": {
+      "main": [
+        [
+          {
+            "node": "agent-assignment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "request-approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "1.0.0",
+  "meta": {
+    "description": "AI Qube Multi-Agent Task Coordination Workflow with Financial System Protection",
+    "created_by": "github_copilot",
+    "created_date": "2025-06-11",
+    "version": "1.0.0",
+    "tags": ["ai-qube", "centaur", "multi-agent", "coordination"]
+  }
+}

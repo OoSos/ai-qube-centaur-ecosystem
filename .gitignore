@@ -36,6 +36,15 @@ ENV/
 *.swo
 *~
 
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vcxproj.filters
+*.vcxproj.user
+
 # OS generated files
 .DS_Store
 .DS_Store?
