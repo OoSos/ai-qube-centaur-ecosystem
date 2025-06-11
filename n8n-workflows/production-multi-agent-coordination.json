@@ -1,0 +1,374 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "centaur-coordination",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Task Request Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "centaur-task-coordination"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Advanced Task Routing Logic\nconst taskData = items[0].json;\nconst taskType = taskData.task_type;\nconst complexity = taskData.complexity || 'medium';\nconst urgency = taskData.urgency || 'normal';\n\n// Capability-based agent selection\nfunction selectOptimalAgent(taskType, complexity, urgency) {\n  const agents = {\n    'claude': {\n      capabilities: ['analysis', 'writing', 'strategy', 'research'],\n      performance_score: 0.92,\n      current_load: 0.3,\n      response_time_avg: 2.1\n    },\n    'codex': {\n      capabilities: ['coding', 'debugging', 'architecture', 'technical'],\n      performance_score: 0.88,\n      current_load: 0.4,\n      response_time_avg: 1.8\n    },\n    'gemini': {\n      capabilities: ['multimodal', 'data_analysis', 'integration', 'optimization'],\n      performance_score: 0.85,\n      current_load: 0.2,\n      response_time_avg: 2.3\n    }\n  };\n\n  // Score agents based on capability match, load, and performance\n  let bestAgent = null;\n  let bestScore = 0;\n\n  for (const [agentName, agent] of Object.entries(agents)) {\n    let score = 0;\n    \n    // Capability match score\n    if (agent.capabilities.includes(taskType)) {\n      score += 40;\n    }\n    \n    // Performance score\n    score += agent.performance_score * 30;\n    \n    // Load balancing (lower load = higher score)\n    score += (1 - agent.current_load) * 20;\n    \n    // Response time (faster = higher score)\n    score += (3 - agent.response_time_avg) * 10;\n    \n    // Urgency multiplier\n    if (urgency === 'high' && agent.response_time_avg < 2) {\n      score *= 1.2;\n    }\n    \n    if (score > bestScore) {\n      bestScore = score;\n      bestAgent = agentName;\n    }\n  }\n\n  return {\n    selected_agent: bestAgent,\n    confidence_score: bestScore,\n    routing_reason: `Selected ${bestAgent} for ${taskType} task with ${complexity} complexity`,\n    all_scores: Object.entries(agents).map(([name, agent]) => ({\n      agent: name,\n      capabilities: agent.capabilities,\n      current_load: agent.current_load\n    }))\n  };\n}\n\nconst routing = selectOptimalAgent(taskType, complexity, urgency);\n\nreturn [{\n  json: {\n    ...taskData,\n    routing_decision: routing,\n    timestamp: new Date().toISOString(),\n    coordination_id: `coord_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`\n  }\n}];"
+      },
+      "id": "task-router",
+      "name": "Advanced Task Router",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.routing_decision.selected_agent}}",
+              "value2": "claude"
+            }
+          ]
+        }
+      },
+      "id": "route-claude",
+      "name": "Route to Claude",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.routing_decision.selected_agent}}",
+              "value2": "codex"
+            }
+          ]
+        }
+      },
+      "id": "route-codex",
+      "name": "Route to Codex",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.routing_decision.selected_agent}}",
+              "value2": "gemini"
+            }
+          ]
+        }
+      },
+      "id": "route-gemini",
+      "name": "Route to Gemini",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-api-key",
+              "value": "={{$credentials.anthropic.api_key}}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "claude-3-opus-20240229"
+            },
+            {
+              "name": "max_tokens",
+              "value": "4000"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"user\", \"content\": \"Task: \" + $json.task_description + \"\\n\\nContext: \" + $json.context + \"\\n\\nPlease provide a comprehensive response with reasoning.\"}]"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "claude-executor",
+      "name": "Claude 4 Opus Executor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$credentials.openai.api_key}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4-turbo"
+            },
+            {
+              "name": "max_tokens",
+              "value": "4000"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"system\", \"content\": \"You are an expert coder and architect. Provide precise, production-ready solutions.\"}, {\"role\": \"user\", \"content\": \"Task: \" + $json.task_description + \"\\n\\nContext: \" + $json.context + \"\\n\\nRequirements: \" + $json.requirements}]"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "codex-executor",
+      "name": "OpenAI Codex Executor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$credentials.google.api_key}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "contents",
+              "value": "=[{\"parts\": [{\"text\": \"Task: \" + $json.task_description + \"\\n\\nContext: \" + $json.context + \"\\n\\nAnalyze and provide optimized solution.\"}]}]"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "gemini-executor",
+      "name": "Gemini Pro Executor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Response Processing and Quality Assessment\nconst originalData = items[0].json;\nconst agentResponse = originalData.agent_response || originalData.choices?.[0]?.message?.content || originalData.candidates?.[0]?.content?.parts?.[0]?.text;\n\n// Quality metrics calculation\nfunction calculateQualityMetrics(response, taskType) {\n  const metrics = {\n    response_length: response.length,\n    estimated_complexity: response.split('\\n').length,\n    has_code_blocks: (response.match(/```/g) || []).length / 2,\n    has_examples: (response.toLowerCase().match(/example|for instance|such as/g) || []).length,\n    has_reasoning: (response.toLowerCase().match(/because|therefore|since|thus/g) || []).length,\n    confidence_indicators: (response.toLowerCase().match(/confident|certain|likely|probably/g) || []).length\n  };\n  \n  // Calculate overall quality score\n  let qualityScore = 0;\n  \n  // Length appropriateness (optimal range 200-2000 chars)\n  if (metrics.response_length >= 200 && metrics.response_length <= 2000) {\n    qualityScore += 25;\n  } else if (metrics.response_length > 100) {\n    qualityScore += 15;\n  }\n  \n  // Technical content for coding tasks\n  if (taskType === 'coding' && metrics.has_code_blocks > 0) {\n    qualityScore += 30;\n  }\n  \n  // Examples and reasoning\n  qualityScore += Math.min(metrics.has_examples * 10, 25);\n  qualityScore += Math.min(metrics.has_reasoning * 5, 20);\n  \n  return {\n    ...metrics,\n    overall_quality_score: Math.min(qualityScore, 100),\n    grade: qualityScore >= 80 ? 'A' : qualityScore >= 60 ? 'B' : qualityScore >= 40 ? 'C' : 'D'\n  };\n}\n\nconst qualityMetrics = calculateQualityMetrics(agentResponse, originalData.task_type);\n\nreturn [{\n  json: {\n    coordination_id: originalData.coordination_id,\n    task_type: originalData.task_type,\n    selected_agent: originalData.routing_decision.selected_agent,\n    agent_response: agentResponse,\n    quality_metrics: qualityMetrics,\n    execution_time: new Date().toISOString(),\n    routing_confidence: originalData.routing_decision.confidence_score,\n    success: true,\n    processed_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "response-processor",
+      "name": "Response Quality Processor",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "coordination_metrics",
+        "columns": "coordination_id, task_type, selected_agent, quality_score, execution_time, routing_confidence, response_length, success",
+        "additionalFields": {
+          "mode": "independently"
+        }
+      },
+      "id": "metrics-storage",
+      "name": "Store Coordination Metrics",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1340, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-centaur",
+          "name": "Centaur PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"coordination_id\": $json.coordination_id,\n  \"agent_used\": $json.selected_agent,\n  \"response\": $json.agent_response,\n  \"quality_score\": $json.quality_metrics.overall_quality_score,\n  \"execution_time\": $json.execution_time\n}"
+      },
+      "id": "webhook-response",
+      "name": "Coordination Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "Task Request Webhook": {
+      "main": [
+        [
+          {
+            "node": "Advanced Task Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Advanced Task Router": {
+      "main": [
+        [
+          {
+            "node": "Route to Claude",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route to Codex",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route to Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Claude": {
+      "main": [
+        [
+          {
+            "node": "Claude 4 Opus Executor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Codex": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Codex Executor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Gemini": {
+      "main": [
+        [
+          {
+            "node": "Gemini Pro Executor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude 4 Opus Executor": {
+      "main": [
+        [
+          {
+            "node": "Response Quality Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Codex Executor": {
+      "main": [
+        [
+          {
+            "node": "Response Quality Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Pro Executor": {
+      "main": [
+        [
+          {
+            "node": "Response Quality Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response Quality Processor": {
+      "main": [
+        [
+          {
+            "node": "Store Coordination Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Coordination Metrics": {
+      "main": [
+        [
+          {
+            "node": "Coordination Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "production-v1.0"
+}
