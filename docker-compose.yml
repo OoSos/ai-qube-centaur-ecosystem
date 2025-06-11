@@ -1,0 +1,181 @@
+version: '3.8'
+
+services:
+  # Main Centaur Application
+  centaur-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://centaur_user:centaur_pass@postgres:5432/centaur_db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+      - n8n
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    networks:
+      - centaur-network
+
+  # n8n Workflow Automation
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=centaur_admin
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=UTC
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n_db
+      - DB_POSTGRESDB_USER=n8n_user
+      - DB_POSTGRESDB_PASSWORD=n8n_pass
+    depends_on:
+      - postgres
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n-workflows:/home/node/.n8n/workflows
+    networks:
+      - centaur-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=centaur_db
+      - POSTGRES_USER=centaur_user
+      - POSTGRES_PASSWORD=centaur_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - centaur-network
+
+  # Redis Cache & Message Queue
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - centaur-network
+
+  # Weaviate Vector Database (Backup to Pinecone)
+  weaviate:
+    image: semitechnologies/weaviate:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - QUERY_DEFAULTS_LIMIT=25
+      - AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true
+      - PERSISTENCE_DATA_PATH=/var/lib/weaviate
+      - DEFAULT_VECTORIZER_MODULE=none
+      - ENABLE_MODULES=text2vec-openai,generative-openai
+      - CLUSTER_HOSTNAME=node1
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    networks:
+      - centaur-network
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - centaur-network
+
+  # Grafana Dashboards
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=centaur_grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - centaur-network
+
+  # Elasticsearch for Logging
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - centaur-network
+
+  # Kibana for Log Visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - centaur-network
+
+  # Jupyter Notebook for Development & Analysis
+  jupyter:
+    image: jupyter/datascience-notebook:latest
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=centaur_jupyter
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ./data:/home/jovyan/work/data
+    networks:
+      - centaur-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  weaviate_data:
+  n8n_data:
+  prometheus_data:
+  grafana_data:
+  elasticsearch_data:
+
+networks:
+  centaur-network:
+    driver: bridge

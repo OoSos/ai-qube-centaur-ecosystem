@@ -1,0 +1,56 @@
+{
+  "name": "centaur-system",
+  "version": "0.1.0",
+  "description": "AI Qube Centaur System - Recursive Self-Improving Human-AI Collaboration Platform",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
+    "test": "jest",
+    "build": "webpack --mode production",
+    "docker:build": "docker build -t centaur-system .",
+    "docker:run": "docker-compose up -d",
+    "docker:stop": "docker-compose down",
+    "setup": "npm install && pip install -r requirements.txt",
+    "n8n:start": "n8n start",
+    "n8n:tunnel": "n8n start --tunnel"
+  },
+  "keywords": [
+    "ai",
+    "human-ai-collaboration",
+    "recursive-improvement",
+    "multi-agent-system",
+    "n8n",
+    "automation"
+  ],
+  "author": "AI Qube Development Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "winston": "^3.11.0",
+    "redis": "^4.6.10",
+    "pg": "^8.11.3",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "uuid": "^9.0.1",
+    "socket.io": "^4.7.4",
+    "n8n": "^1.15.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "eslint": "^8.54.0",
+    "prettier": "^3.1.0",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

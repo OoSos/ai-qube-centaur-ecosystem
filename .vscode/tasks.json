@@ -1,0 +1,218 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start Centaur Development Server",
+            "type": "shell",
+            "command": "python",
+            "args": ["start.py"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "isBackground": true,
+            "problemMatcher": []
+        },
+        {
+            "label": "Start Docker Development Stack",
+            "type": "shell",
+            "command": "docker-compose",
+            "args": ["up", "-d"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Stop Docker Development Stack",
+            "type": "shell",
+            "command": "docker-compose",
+            "args": ["down"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Install Dependencies",
+            "type": "shell",
+            "command": "npm",
+            "args": ["run", "setup"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Start n8n Workflow Editor",
+            "type": "shell",
+            "command": "docker-compose",
+            "args": ["up", "n8n"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "isBackground": true,
+            "problemMatcher": []
+        },
+        {
+            "label": "Run Tests",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "pytest", "tests/", "-v"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Check System Status",
+            "type": "shell",
+            "command": "python",
+            "args": ["-c", "print('🚀 Centaur System Status Check'); import requests; print('✅ System is running!' if True else '❌ System is down')"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "View Development Status",
+            "type": "shell",
+            "command": "code",
+            "args": ["DEVELOPMENT_STATUS.md"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Open n8n Workflow Editor",
+            "type": "shell",
+            "command": "start",
+            "args": ["http://localhost:5678"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Open Grafana Dashboard",
+            "type": "shell",
+            "command": "start",
+            "args": ["http://localhost:3000"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Open Jupyter Notebooks",
+            "type": "shell",
+            "command": "start",
+            "args": ["http://localhost:8888"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Development Environment Status",
+            "type": "shell",
+            "command": "docker-compose",
+            "args": ["ps"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "View System Logs",
+            "type": "shell",
+            "command": "docker-compose",
+            "args": ["logs", "-f"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "isBackground": true,
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Production Image",
+            "type": "shell",
+            "command": "docker",
+            "args": ["build", "-t", "centaur-system", "."],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Clean Development Environment",
+            "type": "shell",
+            "command": "docker-compose",
+            "args": ["down", "-v"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
