@@ -150,7 +150,13 @@ ai-qube-centaur-ecosystem/
 ├── 📁 scripts/                      # Deployment and automation ✅
 │   ├── deploy_n8n_workflows.py     # n8n production deployment ✅
 │   ├── populate_rag_system.py      # RAG knowledge base setup ✅
-│   └── end_to_end_integration.py   # Integration testing ✅
+│   ├── end_to_end_integration.py   # Integration testing ✅
+│   └── health_check.py             # System health validation ✅
+├── 🖥️ Desktop GUI Application       # Professional user interface ✅
+│   ├── centaur_launcher.py         # Main GUI application ✅
+│   ├── Launch_Centaur.bat          # Windows launcher script ✅
+│   ├── Create_Desktop_Shortcut.bat # Desktop shortcut creator ✅
+│   └── GUI_README.md               # GUI user guide ✅
 ├── 📁 n8n-workflows/               # n8n workflow definitions ✅
 │   ├── production-multi-agent-coordination.json ✅
 │   └── github-integration-workflow.json
@@ -164,6 +170,8 @@ ai-qube-centaur-ecosystem/
 │   └── test_rag_system.py          # RAG system tests ✅
 ├── 📁 benches/                      # Performance benchmarks
 ├── 📁 docs/                         # Documentation
+│   ├── DEPLOYMENT_GUIDE.md         # Enterprise deployment guide ✅
+│   └── GUI_README.md               # Desktop application guide ✅
 └── 📁 .github/workflows/           # CI/CD workflows ✅
     └── ci.yml                       # GitHub Actions CI/CD ✅
 ```
@@ -219,6 +227,36 @@ pytest tests/ -v
 # Run performance benchmarks
 python -m pytest benches/ --benchmark-only
 ```
+
+---
+
+## 🖥️ **Desktop GUI Application**
+
+### **One-Click Deployment Interface**
+
+For users who prefer a graphical interface, we provide a professional desktop application:
+
+```bash
+# Launch the GUI (Windows)
+Double-click: Launch_Centaur.bat
+
+# Or create desktop shortcut
+Double-click: Create_Desktop_Shortcut.bat
+
+# Or run directly
+python centaur_launcher.py
+```
+
+### **GUI Features:**
+- 🔍 **Real-time status monitoring** of all services
+- ⚡ **One-click deployment** with progress tracking
+- ⚙️ **Environment configuration** with secure API key setup
+- 📊 **Performance dashboard** integration
+- 📋 **Live log monitoring** with timestamps
+- 🔧 **Service management** (start/stop/restart)
+- 🛡️ **Health check** and system validation
+
+**Perfect for non-technical users** - No command line knowledge required!
 
 ---
 
