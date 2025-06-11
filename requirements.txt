@@ -16,6 +16,8 @@ pinecone-client==2.2.4
 weaviate-client==3.25.3
 chromadb==0.4.18
 sentence-transformers==2.2.2
+faiss-cpu==1.7.4
+qdrant-client==1.6.9
 
 # Data Processing
 pandas==2.1.3
