@@ -1,0 +1,247 @@
+{
+  "name": "Claude + Codex Coordination Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "centaur-task",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Task Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "centaur-task-webhook"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "resource": "task",
+        "additionalFields": {
+          "task_id": "={{ $json.task_id }}",
+          "description": "={{ $json.description }}",
+          "requirements": "={{ $json.requirements }}",
+          "context": "={{ $json.context }}"
+        }
+      },
+      "id": "task-parser",
+      "name": "Parse Task Request",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.task_type }}",
+              "operation": "contains",
+              "value2": "architecture"
+            }
+          ]
+        }
+      },
+      "id": "task-routing",
+      "name": "Task Type Router",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "create",
+        "model": "claude-4-opus-20250514",
+        "prompt": "=Task: {{ $json.description }}\n\nContext: {{ $json.context }}\n\nAs the strategic architect, please:\n1. Analyze the requirements\n2. Design the architectural approach\n3. Identify implementation considerations\n4. Provide recommendations for the implementation specialist\n\nFormat your response as structured JSON with: architecture, recommendations, considerations, next_steps",
+        "maxTokens": 3000,
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "claude-architect",
+      "name": "Claude Strategic Analysis",
+      "type": "n8n-nodes-base.anthropic",
+      "typeVersion": 1,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "resource": "completion",
+        "model": "gpt-4",
+        "prompt": "=Based on the architectural analysis:\n{{ $('Claude Strategic Analysis').item.json.response }}\n\nOriginal task: {{ $json.description }}\nContext: {{ $json.context }}\n\nAs the implementation specialist, please:\n1. Generate working code based on the architecture\n2. Include proper error handling\n3. Add comprehensive tests\n4. Provide implementation documentation\n\nDeliver production-ready code with comments.",
+        "maxTokens": 4000,
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "codex-implementation",
+      "name": "Codex Implementation",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "aggregateResults",
+        "fields": {
+          "task_id": "={{ $('Parse Task Request').item.json.task_id }}",
+          "claude_analysis": "={{ $('Claude Strategic Analysis').item.json.response }}",
+          "codex_implementation": "={{ $('Codex Implementation').item.json.response }}",
+          "coordination_metrics": {
+            "claude_response_time": "={{ $('Claude Strategic Analysis').item.json.execution_time }}",
+            "codex_response_time": "={{ $('Codex Implementation').item.json.execution_time }}",
+            "total_coordination_time": "={{ new Date().getTime() - $('Webhook Task Trigger').item.json.start_time }}",
+            "agents_coordinated": 2
+          },
+          "status": "completed",
+          "timestamp": "={{ new Date().toISOString() }}"
+        }
+      },
+      "id": "result-synthesis",
+      "name": "Synthesize Results",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "repository": "={{ $json.github_repo }}",
+        "title": "=Centaur System Implementation: {{ $json.task_id }}",
+        "body": "=## Claude Strategic Analysis\n{{ $json.claude_analysis }}\n\n## Codex Implementation\n```python\n{{ $json.codex_implementation }}\n```\n\n## Coordination Metrics\n- Claude Response Time: {{ $json.coordination_metrics.claude_response_time }}ms\n- Codex Response Time: {{ $json.coordination_metrics.codex_response_time }}ms\n- Total Coordination Time: {{ $json.coordination_metrics.total_coordination_time }}ms\n- Agents Coordinated: {{ $json.coordination_metrics.agents_coordinated }}",
+        "assignees": [],
+        "labels": ["centaur-generated", "multi-agent-coordination"]
+      },
+      "id": "github-output",
+      "name": "Create GitHub Issue",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "coordination_metrics",
+        "columns": "task_id, claude_response_time, codex_response_time, total_time, success_rate, timestamp",
+        "values": "={{ $json.task_id }}, {{ $json.coordination_metrics.claude_response_time }}, {{ $json.coordination_metrics.codex_response_time }}, {{ $json.coordination_metrics.total_coordination_time }}, 1.0, {{ $json.timestamp }}"
+      },
+      "id": "metrics-storage",
+      "name": "Store Coordination Metrics",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1340, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "webhook-response",
+      "name": "Return Results",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Task Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Task Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Task Request": {
+      "main": [
+        [
+          {
+            "node": "Task Type Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Task Type Router": {
+      "main": [
+        [
+          {
+            "node": "Claude Strategic Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Codex Implementation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Strategic Analysis": {
+      "main": [
+        [
+          {
+            "node": "Codex Implementation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Codex Implementation": {
+      "main": [
+        [
+          {
+            "node": "Synthesize Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Synthesize Results": {
+      "main": [
+        [
+          {
+            "node": "Create GitHub Issue",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Store Coordination Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create GitHub Issue": {
+      "main": [
+        [
+          {
+            "node": "Return Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "America/New_York",
+    "saveManualExecutions": true
+  },
+  "tags": ["centaur-system", "multi-agent", "coordination"]
+}

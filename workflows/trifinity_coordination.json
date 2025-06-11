@@ -1,0 +1,15 @@
+{
+  "name": "Trifinity Coordination",
+  "description": "Full Claude + Codex + Gemini coordination for complex feature development.",
+  "nodes": [
+    {"id": "1", "type": "trigger", "name": "Manual Trigger", "parameters": {}},
+    {"id": "2", "type": "python", "name": "Gemini Research Agent", "parameters": {"script": "# Gemini researches requirements and context\nrequirements = 'Implement a robust feature with error handling'\noutput = {'requirements': requirements}"}},
+    {"id": "3", "type": "python", "name": "Claude Planning Agent", "parameters": {"script": "# Claude plans the feature\nplan = 'Step 1: Define interface. Step 2: Implement logic. Step 3: Add error handling.'\noutput = {'plan': plan}"}},
+    {"id": "4", "type": "python", "name": "Codex Implementation Agent", "parameters": {"script": "# Codex implements the feature\ndef robust_add(a, b):\n    '''Add two numbers with error handling'''\n    try:\n        return a + b\n    except Exception as e:\n        return f'Error: {str(e)}'\nresult = robust_add(2, 3)\noutput = {'result': result}"}}
+  ],
+  "connections": [
+    {"from": "1", "to": "2"},
+    {"from": "2", "to": "3"},
+    {"from": "3", "to": "4"}
+  ]
+}

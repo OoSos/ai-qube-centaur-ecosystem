@@ -1,0 +1,32 @@
+{
+  "name": "Claude-Codex Basic Coordination",
+  "description": "Basic 2-agent task coordination workflow for Centaur System.",
+  "nodes": [
+    {
+      "id": "1",
+      "type": "trigger",
+      "name": "Manual Trigger",
+      "parameters": {}
+    },
+    {
+      "id": "2",
+      "type": "python",
+      "name": "Claude Agent",
+      "parameters": {
+        "script": "# Simulate Claude agent generating a simple Python function\ndef add(a, b):\n    return a + b\nresult = add(2, 3)\noutput = {'result': result}"
+      }
+    },
+    {
+      "id": "3",
+      "type": "python",
+      "name": "Codex Agent",
+      "parameters": {
+        "script": "# Simulate Codex agent reviewing and improving the function\ndef add(a, b):\n    '''Add two numbers with input validation'''\n    if not (isinstance(a, (int, float)) and isinstance(b, (int, float))):\n        raise ValueError('Inputs must be numbers')\n    return a + b\nresult = add(2, 3)\noutput = {'result': result}"
+      }
+    }
+  ],
+  "connections": [
+    {"from": "1", "to": "2"},
+    {"from": "2", "to": "3"}
+  ]
+}

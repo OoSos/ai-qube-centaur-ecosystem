@@ -1,0 +1,13 @@
+{
+  "name": "RAG Enhanced Coordination",
+  "description": "Context-aware agent coordination using RAG for project-specific development tasks.",
+  "nodes": [
+    {"id": "1", "type": "trigger", "name": "Manual Trigger", "parameters": {}},
+    {"id": "2", "type": "python", "name": "Retrieve Context from Weaviate", "parameters": {"script": "# Simulate context retrieval from Weaviate\ncontext = 'Relevant project documentation and agent logs'\noutput = {'context': context}"}},
+    {"id": "3", "type": "python", "name": "Agent Coordination", "parameters": {"script": "# Use context to coordinate agents\nif 'documentation' in items[0]['context']:\n    result = 'Agents coordinated using project documentation.'\nelse:\n    result = 'Default coordination.'\noutput = {'result': result}"}}
+  ],
+  "connections": [
+    {"from": "1", "to": "2"},
+    {"from": "2", "to": "3"}
+  ]
+}

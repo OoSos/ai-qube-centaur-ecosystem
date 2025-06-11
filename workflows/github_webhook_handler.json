@@ -1,0 +1,11 @@
+{
+  "name": "GitHub Webhook Handler",
+  "description": "Trigger n8n workflows from GitHub events for Centaur System.",
+  "nodes": [
+    {"id": "1", "type": "webhook", "name": "GitHub Webhook", "parameters": {"httpMethod": "POST", "path": "/github-webhook"}},
+    {"id": "2", "type": "python", "name": "Analyze Pull Request", "parameters": {"script": "# Analyze PR event\npr_data = items[0]['body']\noutput = {'pr_title': pr_data.get('title', ''), 'action': pr_data.get('action', '')}"}}
+  ],
+  "connections": [
+    {"from": "1", "to": "2"}
+  ]
+}
