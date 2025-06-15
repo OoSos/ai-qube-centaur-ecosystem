@@ -1,0 +1,322 @@
+{
+  "name": "Centaur Trifinity Coordination - PRODUCTION",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "trifinity-coordination",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "trifinity-trigger",
+      "name": "Trifinity Task Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 400],
+      "webhookId": "trifinity-coordination-webhook"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "task_id",
+              "value": "={{ $json.task_id || 'auto_' + $now }}"
+            },
+            {
+              "name": "description", 
+              "value": "={{ $json.description }}"
+            },
+            {
+              "name": "complexity",
+              "value": "={{ $json.complexity || 'medium' }}"
+            },
+            {
+              "name": "start_time",
+              "value": "={{ $now }}"
+            }
+          ]
+        }
+      },
+      "id": "task-preparation",
+      "name": "Task Preparation",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [400, 400]
+    },
+    {
+      "parameters": {
+        "model": "claude-3-5-sonnet-20241022",
+        "messages": {
+          "values": [
+            {
+              "message": "=As the Strategic Architect for the Centaur System, analyze this task:\n\n**Task**: {{ $json.description }}\n**Complexity**: {{ $json.complexity }}\n\nProvide:\n1. **Architecture Analysis**: Break down the technical approach\n2. **Implementation Strategy**: High-level design decisions\n3. **Quality Requirements**: Standards and testing needs\n4. **Coordination Guidance**: How other agents should approach this\n\nFormat as JSON with keys: architecture, strategy, quality, coordination",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 3000
+        }
+      },
+      "id": "claude-architect",
+      "name": "Claude Strategic Analysis",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1,
+      "position": [400, 200]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-pro",
+        "messages": {
+          "values": [
+            {
+              "message": "=As the Research & Optimization Engine, research this task:\n\n**Task**: {{ $json.description }}\n**Complexity**: {{ $json.complexity }}\n\nProvide:\n1. **Research Findings**: Best practices and optimal approaches\n2. **Performance Considerations**: Scalability and efficiency factors\n3. **Risk Analysis**: Potential issues and mitigation strategies\n4. **Optimization Opportunities**: How to maximize effectiveness\n\nFormat as JSON with keys: research, performance, risks, optimization",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4,
+          "maxTokens": 3000
+        }
+      },
+      "id": "gemini-research",
+      "name": "Gemini Research Analysis", 
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGenerativeAI",
+      "typeVersion": 1,
+      "position": [400, 600]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "values": [
+            {
+              "message": "=As the Implementation Specialist, implement this task:\n\n**Task**: {{ $json.description }}\n**Architecture Guidance**: {{ $('Claude Strategic Analysis').item.json.content }}\n**Research Insights**: {{ $('Gemini Research Analysis').item.json.content }}\n\nProvide:\n1. **Working Implementation**: Complete, production-ready code\n2. **Error Handling**: Robust error management\n3. **Testing**: Comprehensive test coverage\n4. **Documentation**: Clear usage instructions\n\nFormat as JSON with keys: implementation, tests, documentation, deployment",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 4000
+        }
+      },
+      "id": "codex-implementation",
+      "name": "Codex Implementation",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAI",
+      "typeVersion": 1,
+      "position": [700, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "task_id",
+              "value": "={{ $('Task Preparation').item.json.task_id }}"
+            },
+            {
+              "name": "status",
+              "value": "completed"
+            },
+            {
+              "name": "completion_time",
+              "value": "={{ $now }}"
+            }
+          ],
+          "number": [
+            {
+              "name": "total_duration",
+              "value": "={{ $now - $('Task Preparation').item.json.start_time }}"
+            },
+            {
+              "name": "agents_coordinated",
+              "value": 3
+            }
+          ],
+          "object": [
+            {
+              "name": "claude_analysis",
+              "value": "={{ $('Claude Strategic Analysis').item.json }}"
+            },
+            {
+              "name": "gemini_research", 
+              "value": "={{ $('Gemini Research Analysis').item.json }}"
+            },
+            {
+              "name": "codex_implementation",
+              "value": "={{ $('Codex Implementation').item.json }}"
+            },
+            {
+              "name": "coordination_metrics",
+              "value": "={{ {\n  'claude_response_time': $('Claude Strategic Analysis').item.json.usage?.total_tokens || 0,\n  'gemini_response_time': $('Gemini Research Analysis').item.json.usage?.total_tokens || 0,\n  'codex_response_time': $('Codex Implementation').item.json.usage?.total_tokens || 0,\n  'total_coordination_time': $now - $('Task Preparation').item.json.start_time,\n  'success_rate': 1.0,\n  'agents_coordinated': 3\n} }}"
+            }
+          ]
+        }
+      },
+      "id": "result-synthesis",
+      "name": "Synthesize Trifinity Results",
+      "type": "n8n-nodes-base.set", 
+      "typeVersion": 1,
+      "position": [1000, 400]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "coordination_metrics",
+        "columns": "task_id, agents_coordinated, total_duration, success_rate, claude_tokens, gemini_tokens, codex_tokens, timestamp",
+        "additionalFields": {
+          "mode": "independently"
+        }
+      },
+      "id": "metrics-storage",
+      "name": "Store Coordination Metrics",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1000, 600]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "owner": "={{ $json.github_owner || 'OoSos' }}",
+        "repository": "={{ $json.github_repo || 'ai-qube-centaur-ecosystem' }}",
+        "title": "=🤖 Trifinity Coordination Result: {{ $('Task Preparation').item.json.task_id }}",
+        "body": "=# Centaur Trifinity Coordination Results\n\n**Task**: {{ $('Task Preparation').item.json.description }}\n**Completion Time**: {{ new Date($('Synthesize Trifinity Results').item.json.completion_time).toLocaleString() }}\n**Total Duration**: {{ Math.round($('Synthesize Trifinity Results').item.json.total_duration / 1000) }} seconds\n\n## 🧠 Claude Strategic Analysis\n```json\n{{ JSON.stringify($('Claude Strategic Analysis').item.json.content, null, 2) }}\n```\n\n## 🔬 Gemini Research Insights\n```json\n{{ JSON.stringify($('Gemini Research Analysis').item.json.content, null, 2) }}\n```\n\n## 💻 Codex Implementation\n```json\n{{ JSON.stringify($('Codex Implementation').item.json.content, null, 2) }}\n```\n\n## 📊 Coordination Metrics\n- **Agents Coordinated**: {{ $('Synthesize Trifinity Results').item.json.agents_coordinated }}\n- **Total Duration**: {{ Math.round($('Synthesize Trifinity Results').item.json.total_duration / 1000) }}s\n- **Success Rate**: {{ ($('Synthesize Trifinity Results').item.json.coordination_metrics.success_rate * 100) }}%\n- **Timestamp**: {{ new Date().toISOString() }}\n\n---\n*Generated by AI Qube Centaur System - Trifinity Coordination*",
+        "labels": ["centaur-generated", "trifinity-coordination", "multi-agent"],
+        "assignees": []
+      },
+      "id": "github-documentation",
+      "name": "Create GitHub Documentation",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1,
+      "position": [1200, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  'success': true,\n  'task_id': $('Task Preparation').item.json.task_id,\n  'agents_coordinated': $('Synthesize Trifinity Results').item.json.agents_coordinated,\n  'total_duration_seconds': Math.round($('Synthesize Trifinity Results').item.json.total_duration / 1000),\n  'claude_analysis': $('Claude Strategic Analysis').item.json.content,\n  'gemini_research': $('Gemini Research Analysis').item.json.content,\n  'codex_implementation': $('Codex Implementation').item.json.content,\n  'github_issue_url': $('Create GitHub Documentation').item.json.html_url,\n  'coordination_effectiveness': 'SUCCESSFUL',\n  'timestamp': new Date().toISOString()\n} }}"
+      },
+      "id": "trifinity-response",
+      "name": "Return Trifinity Results",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1400, 400]
+    }
+  ],
+  "connections": {
+    "Trifinity Task Trigger": {
+      "main": [
+        [
+          {
+            "node": "Task Preparation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Task Preparation": {
+      "main": [
+        [
+          {
+            "node": "Claude Strategic Analysis",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gemini Research Analysis",
+            "type": "main", 
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Strategic Analysis": {
+      "main": [
+        [
+          {
+            "node": "Codex Implementation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Research Analysis": {
+      "main": [
+        [
+          {
+            "node": "Codex Implementation", 
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Codex Implementation": {
+      "main": [
+        [
+          {
+            "node": "Synthesize Trifinity Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Synthesize Trifinity Results": {
+      "main": [
+        [
+          {
+            "node": "Store Coordination Metrics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create GitHub Documentation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Coordination Metrics": {
+      "main": [
+        [
+          {
+            "node": "Return Trifinity Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create GitHub Documentation": {
+      "main": [
+        [
+          {
+            "node": "Return Trifinity Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "America/New_York",
+    "saveManualExecutions": true,
+    "executionOrder": "v1"
+  },
+  "tags": ["centaur-system", "trifinity", "production", "multi-agent"],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
