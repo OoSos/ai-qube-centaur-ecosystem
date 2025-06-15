@@ -4,6 +4,10 @@ FROM node:18-alpine AS node-base
 # Install Python and build dependencies
 RUN apk add --no-cache python3 py3-pip build-base postgresql-dev
 
+# Create Python virtual environment
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 # Create app directory
 WORKDIR /app
 
@@ -14,8 +18,8 @@ COPY requirements.txt ./
 # Install Node.js dependencies
 RUN npm ci --only=production
 
-# Install Python dependencies
-RUN pip3 install --no-cache-dir -r requirements.txt
+# Install Python dependencies in virtual environment
+RUN source /opt/venv/bin/activate && pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
